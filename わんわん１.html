@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Custom Dashboard - オールインワンハブ</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap');
+        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; }
+        .glass-card { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); }
+        .dark .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-300">
+
+    <!-- ヘッダー -->
+    <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 lg:px-8 py-3 flex items-center justify-between shadow-xs">
+        <div class="flex items-center space-x-3">
+            <div id="header-icon-bg" class="bg-indigo-600 text-white p-2 rounded-xl shadow-md flex items-center justify-center transition-colors">
+                <i class="fa-solid fa-layer-group text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight tracking-tight">My Custom Dashboard</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400" id="current-date-display">日付を読み込んでいます...</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-3">
+            <!-- テーマカラー選択 -->
+            <select id="theme-color-select" onchange="changeThemeColor(this.value)" class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:outline-none cursor-pointer">
+                <option value="indigo">テーマ: インディゴ</option>
+                <option value="emerald">テーマ: エメラルド</option>
+                <option value="amber">テーマ: アンバー</option>
+                <option value="violet">テーマ: バイオレット</option>
+            </select>
+            <!-- ダークモード切替 -->
+            <button id="theme-toggle" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer text-slate-600 dark:text-slate-300">
+                <i class="fa-solid fa-moon dark:hidden"></i>
+                <i class="fa-solid fa-sun hidden dark:inline text-amber-400"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- メインレイアウト -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- サイドナビゲーション / クイックサマリー -->
+        <section class="lg:col-span-3 flex flex-col space-y-6">
+            <!-- プロフィール＆クイックデータ -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs">
+                <div class="flex items-center space-x-4 mb-4">
+                    <div id="profile-avatar" class="w-12 h-12 bg-gradient-to-tr from-indigo-500 to-violet-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-md transition-all">
+                        ME
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-base">マイダッシュボード</h2>
+                        <span class="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 rounded-full font-medium inline-block mt-1">カスタム稼働中</span>
+                    </div>
+                </div>
+                <div class="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-sm">
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-500 dark:text-slate-400">未完了タスク</span>
+                        <span class="font-bold text-indigo-600 dark:text-indigo-400 theme-text" id="stat-pending-tasks">0件</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-500 dark:text-slate-400">今日の習慣達成</span>
+                        <span class="font-bold text-emerald-600 dark:text-emerald-400" id="stat-habit-rate">0%</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-500 dark:text-slate-400">学習進捗完了</span>
+                        <span class="font-bold text-violet-600 dark:text-violet-400" id="stat-study-rate">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- タブ切り替えボタン -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-xs flex flex-col space-y-1">
+                <button onclick="switchTab('tasks')" id="tab-btn-tasks" class="tab-btn w-full text-left px-4 py-3 rounded-xl font-medium text-sm transition flex items-center space-x-3 bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400 cursor-pointer theme-tab-active">
+                    <i class="fa-solid fa-list-check w-5"></i>
+                    <span>タスク＆目標プランナー</span>
+                </button>
+                <button onclick="switchTab('study')" id="tab-btn-study" class="tab-btn w-full text-left px-4 py-3 rounded-xl font-medium text-sm transition flex items-center space-x-3 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer">
+                    <i class="fa-solid fa-book-open w-5"></i>
+                    <span>学習・資格カウンター</span>
+                </button>
+                <button onclick="switchTab('workout')" id="tab-btn-workout" class="tab-btn w-full text-left px-4 py-3 rounded-xl font-medium text-sm transition flex items-center space-x-3 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer">
+                    <i class="fa-solid fa-dumbbell w-5"></i>
+                    <span>筋トレ＆健康ログ</span>
+                </button>
+                <button onclick="switchTab('timer')" id="tab-btn-timer" class="tab-btn w-full text-left px-4 py-3 rounded-xl font-medium text-sm transition flex items-center space-x-3 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer">
+                    <i class="fa-solid fa-clock w-5"></i>
+                    <span>ポモドーロ＆環境音</span>
+                </button>
+                <button onclick="switchTab('money')" id="tab-btn-money" class="tab-btn w-full text-left px-4 py-3 rounded-xl font-medium text-sm transition flex items-center space-x-3 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer">
+                    <i class="fa-solid fa-wallet w-5"></i>
+                    <span>マネープランナー</span>
+                </button>
+                <button onclick="switchTab('habits')" id="tab-btn-habits" class="tab-btn w-full text-left px-4 py-3 rounded-xl font-medium text-sm transition flex items-center space-x-3 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer">
+                    <i class="fa-solid fa-fire w-5"></i>
+                    <span>習慣＆ストリー크</span>
+                </button>
+                <button onclick="switchTab('memos')" id="tab-btn-memos" class="tab-btn w-full text-left px-4 py-3 rounded-xl font-medium text-sm transition flex items-center space-x-3 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer">
+                    <i class="fa-solid fa-note-sticky w-5"></i>
+                    <span>クイックメモ帳</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- メインコンテンツエリア -->
+        <section class="lg:col-span-9 space-y-6">
+
+            <!-- 1. タスク＆目標プランナー -->
+            <div id="tab-tasks" class="tab-content space-y-6">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold flex items-center space-x-2">
+                                <i class="fa-solid fa-list-check text-indigo-600 dark:text-indigo-400 theme-text"></i>
+                                <span>スマートタスク＆目標プランナー</span>
+                            </h2>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">日々のタスクと重要な目標・期限（D-Day）を一元管理します。</p>
+                        </div>
+                    </div>
+
+                    <form id="task-form" class="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-6 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <div class="sm:col-span-5">
+                            <input type="text" id="task-title" placeholder="タスクや目標を入力..." required
+                                class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div class="sm:col-span-3">
+                            <input type="date" id="task-date" required
+                                class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <select id="task-priority" class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="高">優先度: 高</option>
+                                <option value="中" selected>優先度: 中</option>
+                                <option value="低">優先度: 低</option>
+                            </select>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl text-sm transition shadow-sm cursor-pointer flex items-center justify-center space-x-2 theme-bg">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>追加</span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="space-y-3" id="task-list-container"></div>
+                </div>
+            </div>
+
+            <!-- 追加機能 1: 学習・資格カウンター -->
+            <div id="tab-study" class="tab-content hidden space-y-6">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold flex items-center space-x-2">
+                                <i class="fa-solid fa-book-open text-indigo-600 dark:text-indigo-400 theme-text"></i>
+                                <span>学習・資格カウンター</span>
+                            </h2>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">資格試験の過去問演習や単元ごとの完了状況を追跡します。</p>
+                        </div>
+                    </div>
+
+                    <form id="study-form" class="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-6 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <div class="sm:col-span-6">
+                            <input type="text" id="study-title" placeholder="学習項目・科目（例: 日商簿記 過去問演習）" required
+                                class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div class="sm:col-span-4">
+                            <input type="number" id="study-total" placeholder="目標完了数（例: 10回分）" min="1" required
+                                class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl text-sm transition shadow-sm cursor-pointer flex items-center justify-center space-x-2 theme-bg">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>追加</span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="space-y-4" id="study-list-container"></div>
+                </div>
+            </div>
+
+            <!-- 追加機能 2: 筋トレ＆健康ログ -->
+            <div id="tab-workout" class="tab-content hidden space-y-6">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold flex items-center space-x-2">
+                                <i class="fa-solid fa-dumbbell text-indigo-600 dark:text-indigo-400 theme-text"></i>
+                                <span>筋トレ＆コンディショニングログ</span>
+                            </h2>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">自宅でのトレーニング内容やセット数を記録します。</p>
+                        </div>
+                    </div>
+
+                    <form id="workout-form" class="grid grid-cols-1 sm:grid-cols-12 gap-3 mb-6 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <div class="sm:col-span-6">
+                            <input type="text" id="workout-title" placeholder="メニュー名（例: 腕立て伏せ、腹筋ローラー）" required
+                                class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div class="sm:col-span-4">
+                            <input type="text" id="workout-detail" placeholder="回数・重量（例: 20回×3セット）" required
+                                class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl text-sm transition shadow-sm cursor-pointer flex items-center justify-center space-x-2 theme-bg">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>記録</span>
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="space-y-3" id="workout-list-container"></div>
+                </div>
+            </div>
+
+            <!-- ポモドーロ＆環境音 -->
+            <div id="tab-timer" class="tab-content hidden space-y-6">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs text-center">
+                    <h2 class="text-lg font-bold flex items-center justify-center space-x-2 mb-2">
+                        <i class="fa-solid fa-clock text-indigo-600 dark:text-indigo-400 theme-text"></i>
+                        <span>集中ポモドーロタイマー</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-8">作業と休憩を切り替えて生産性を最大化しましょう。</p>
+
+                    <div class="flex justify-center space-x-2 mb-6">
+                        <button onclick="setTimerMode('work')" id="mode-work" class="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white transition shadow-sm cursor-pointer theme-bg">作業 (25分)</button>
+                        <button onclick="setTimerMode('shortBreak')" id="mode-shortBreak" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer">短い休憩 (5分)</button>
+                        <button onclick="setTimerMode('longBreak')" id="mode-longBreak" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer">長い休憩 (15分)</button>
+                    </div>
+
+                    <div class="relative w-64 h-64 mx-auto flex items-center justify-center rounded-full bg-slate-50 dark:bg-slate-950 border-8 border-slate-100 dark:border-slate-800 shadow-inner mb-8">
+                        <span id="timer-display" class="text-5xl font-extrabold tracking-wider font-mono">25:00</span>
+                    </div>
+
+                    <div class="flex justify-center space-x-4 mb-8">
+                        <button id="timer-start-btn" onclick="toggleTimer()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl text-sm transition shadow-md cursor-pointer flex items-center space-x-2 theme-bg">
+                            <i class="fa-solid fa-play" id="timer-icon"></i>
+                            <span id="timer-btn-text">スタート</span>
+                        </button>
+                        <button onclick="resetTimer()" class="bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 font-medium py-3 px-6 rounded-xl text-sm transition cursor-pointer">
+                            リセット
+                        </button>
+                    </div>
+
+                    <div class="border-t border-slate-100 dark:border-slate-800 pt-6">
+                        <h3 class="text-sm font-semibold mb-3 flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-headphones text-indigo-500 theme-text"></i>
+                            <span>環境音（Web音声合成）</span>
+                        </h3>
+                        <div class="flex justify-center space-x-3">
+                            <button onclick="toggleAmbientSound('rain')" id="sound-rain" class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer flex items-center space-x-2">
+                                <i class="fa-solid fa-cloud-rain"></i>
+                                <span>雨の音</span>
+                            </button>
+                            <button onclick="toggleAmbientSound('waves')" id="sound-waves" class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer flex items-center space-x-2">
+                                <i class="fa-solid fa-water"></i>
+                                <span>波の音</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- マネープランナー -->
+            <div id="tab-money" class="tab-content hidden space-y-6">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs">
+                    <h2 class="text-lg font-bold flex items-center space-x-2 mb-1">
+                        <i class="fa-solid fa-wallet text-indigo-600 dark:text-indigo-400 theme-text"></i>
+                        <span>マネープランナー（資産形成シミュレーター）</span>
+                    </h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">毎月の積立と複利運用による未来の資産をシミュレーションします。</p>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <div class="lg:col-span-5 space-y-4 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">毎月の積立額 (円)</label>
+                                <input type="number" id="money-monthly" value="30000" step="5000" min="0" oninput="calculateCompound()"
+                                    class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">想定年利 (%)</label>
+                                <input type="number" id="money-rate" value="5" step="0.5" min="0" max="20" oninput="calculateCompound()"
+                                    class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">運用期間 (年)</label>
+                                <input type="number" id="money-years" value="20" step="1" min="1" max="50" oninput="calculateCompound()"
+                                    class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+
+                            <div class="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-slate-500">元本合計:</span>
+                                    <span id="res-principal" class="font-bold">¥0</span>
+                                </div>
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-slate-500">運用収益:</span>
+                                    <span id="res-profit" class="font-bold text-emerald-600">¥0</span>
+                                </div>
+                                <div class="flex justify-between text-sm pt-2 border-t border-slate-200 dark:border-slate-800">
+                                    <span class="font-bold">資産合計:</span>
+                                    <span id="res-total" class="font-bold text-indigo-600 dark:text-indigo-400 text-base theme-text">¥0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="lg:col-span-7 flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                            <div class="w-full h-64">
+                                <canvas id="compoundChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 習慣＆ストリーク -->
+            <div id="tab-habits" class="tab-content hidden space-y-6">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold flex items-center space-x-2">
+                                <i class="fa-solid fa-fire text-indigo-600 dark:text-indigo-400 theme-text"></i>
+                                <span>習慣＆ストリークトラッカー</span>
+                            </h2>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">毎日コツコツ続けるルーティンを管理します。</p>
+                        </div>
+                    </div>
+
+                    <form id="habit-form" class="flex gap-3 mb-6 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <input type="text" id="habit-title" placeholder="新しい習慣（例: 読書30分など）..." required
+                            class="flex-1 px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-xl text-sm transition shadow-sm cursor-pointer flex items-center space-x-2 theme-bg">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>追加</span>
+                        </button>
+                    </form>
+
+                    <div class="space-y-3" id="habit-list-container"></div>
+                </div>
+            </div>
+
+            <!-- 追加機能 4: クイックメモ帳 -->
+            <div id="tab-memos" class="tab-content hidden space-y-6">
+                <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xs">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold flex items-center space-x-2">
+                                <i class="fa-solid fa-note-sticky text-indigo-600 dark:text-indigo-400 theme-text"></i>
+                                <span>クイックメモ・アイデア帳</span>
+                            </h2>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">ふとしたアイデアや調べたことをサッと書き留めて保存します。</p>
+                        </div>
+                    </div>
+
+                    <form id="memo-form" class="space-y-3 mb-6 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <input type="text" id="memo-title" placeholder="メモのタイトル..." required
+                            class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <textarea id="memo-content" placeholder="内容や詳細を記入..." rows="3" required
+                            class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-xl text-sm transition shadow-sm cursor-pointer flex items-center space-x-2 theme-bg">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>メモを保存</span>
+                        </button>
+                    </form>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="memo-list-container"></div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- スクリプト -->
+    <script>
+        // --- テーマカラー管理 ---
+        let currentThemeColor = localStorage.getItem('ph_theme_color') || 'indigo';
+
+        const colorMap = {
+            indigo: { bg: 'bg-indigo-600', text: 'text-indigo-600 dark:text-indigo-400', activeBg: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400' },
+            emerald: { bg: 'bg-emerald-600', text: 'text-emerald-600 dark:text-emerald-400', activeBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400' },
+            amber: { bg: 'bg-amber-600', text: 'text-amber-600 dark:text-amber-400', activeBg: 'bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400' },
+            violet: { bg: 'bg-violet-600', text: 'text-violet-600 dark:text-violet-400', activeBg: 'bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-400' }
+        };
+
+        function changeThemeColor(color) {
+            currentThemeColor = color;
+            localStorage.setItem('ph_theme_color', color);
+            document.getElementById('theme-color-select').value = color;
+            applyThemeStyles();
+        }
+
+        function applyThemeStyles() {
+            const map = colorMap[currentThemeColor] || colorMap.indigo;
+            document.getElementById('header-icon-bg').className = `${map.bg} text-white p-2 rounded-xl shadow-md flex items-center justify-center transition-colors`;
+            document.getElementById('profile-avatar').className = `w-12 h-12 bg-gradient-to-tr ${currentThemeColor === 'emerald' ? 'from-emerald-500 to-teal-500' : currentThemeColor === 'amber' ? 'from-amber-500 to-orange-500' : currentThemeColor === 'violet' ? 'from-violet-500 to-purple-500' : 'from-indigo-500 to-violet-500'} rounded-full flex items-center justify-center text-white font-bold text-xl shadow-md transition-all`;
+            
+            document.querySelectorAll('.theme-bg').forEach(el => {
+                el.className = el.className.replace(/bg-\w+-\d+/g, map.bg.split(' ')[0]);
+            });
+            document.querySelectorAll('.theme-text').forEach(el => {
+                el.className = el.className.replace(/text-\w+-\d+/g, map.text.split(' ')[0]);
+            });
+        }
+
+        // --- 日付表示 ---
+        const updateDate = () => {
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' };
+            document.getElementById('current-date-display').textContent = now.toLocaleDateString('ja-JP', options);
+        };
+        updateDate();
+
+        // --- タブ切り替え ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('bg-indigo-50', 'text-indigo-600', 'dark:bg-indigo-950/50', 'dark:text-indigo-400', 'bg-emerald-50', 'text-emerald-600', 'bg-amber-50', 'text-amber-600', 'bg-violet-50', 'text-violet-600');
+                el.classList.add('text-slate-600', 'dark:text-slate-400');
+            });
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const btn = document.getElementById(`tab-btn-${tabId}`);
+            const map = colorMap[currentThemeColor] || colorMap.indigo;
+            btn.className = `tab-btn w-full text-left px-4 py-3 rounded-xl font-medium text-sm transition flex items-center space-x-3 cursor-pointer ${map.activeBg}`;
+            if(tabId === 'money') { calculateCompound(); }
+        }
+
+        // --- ダークモード切替 ---
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        themeToggleBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        });
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+
+        // --- タスク管理 ---
+        let tasks = JSON.parse(localStorage.getItem('ph_tasks')) || [
+            { id: 1, title: 'ポートフォリオサイトの設計・開発', date: '2026-06-30', priority: '高', completed: false }
+        ];
+
+        function saveTasks() {
+            localStorage.setItem('ph_tasks', JSON.stringify(tasks));
+            renderTasks();
+            updateStats();
+        }
+
+        function renderTasks() {
+            const container = document.getElementById('task-list-container');
+            if (tasks.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm">タスクはありません。</div>`;
+                return;
+            }
+            container.innerHTML = tasks.map(task => {
+                const today = new Date();
+                const dueDate = new Date(task.date);
+                const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+                let ddayText = `D-${diffDays}`;
+                if (diffDays < 0) ddayText = `期限超過`;
+                if (diffDays === 0) ddayText = `今日が期限`;
+
+                const priorityColor = task.priority === '高' ? 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
+
+                return `
+                    <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl transition ${task.completed ? 'opacity-60' : ''}">
+                        <div class="flex items-center space-x-3 flex-1">
+                            <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id})"
+                                class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
+                            <div>
+                                <h4 class="text-sm font-medium ${task.completed ? 'line-through text-slate-400' : ''}">${task.title}</h4>
+                                <div class="flex items-center space-x-2 mt-1">
+                                    <span class="text-xs px-2 py-0.5 rounded-md font-semibold ${priorityColor}">優先度: ${task.priority}</span>
+                                    <span class="text-xs text-slate-500 dark:text-slate-400"><i class="fa-regular fa-calendar mr-1"></i>${task.date} (${ddayText})</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="deleteTask(${task.id})" class="text-slate-400 hover:text-rose-500 p-2 transition cursor-pointer">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('task-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('task-title').value;
+            const date = document.getElementById('task-date').value;
+            const priority = document.getElementById('task-priority').value;
+            tasks.push({ id: Date.now(), title, date, priority, completed: false });
+            document.getElementById('task-title').value = '';
+            saveTasks();
+        });
+
+        function toggleTask(id) {
+            tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+            saveTasks();
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveTasks();
+        }
+
+        // --- 追加機能 1: 学習・資格カウンター ---
+        let studyItems = JSON.parse(localStorage.getItem('ph_study')) || [
+            { id: 1, title: '日商簿記 過去問演習', current: 3, total: 10 }
+        ];
+
+        function saveStudy() {
+            localStorage.setItem('ph_study', JSON.stringify(studyItems));
+            renderStudy();
+            updateStats();
+        }
+
+        function renderStudy() {
+            const container = document.getElementById('study-list-container');
+            if (studyItems.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm">学習項目がありません。</div>`;
+                return;
+            }
+            container.innerHTML = studyItems.map(item => {
+                const percent = Math.min(100, Math.round((item.current / item.total) * 100));
+                return `
+                    <div class="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-sm font-bold">${item.title}</h4>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-semibold text-slate-500">${item.current} / ${item.total} 完了 (${percent}%)</span>
+                                <button onclick="deleteStudy(${item.id})" class="text-slate-400 hover:text-rose-500 p-1 transition cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>
+                            </div>
+                        </div>
+                        <div class="w-full bg-slate-200 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                            <div class="bg-indigo-600 h-2.5 rounded-full theme-bg transition-all duration-300" style="width: ${percent}%"></div>
+                        </div>
+                        <div class="flex justify-end space-x-2 pt-1">
+                            <button onclick="updateStudyCount(${item.id}, -1)" class="px-3 py-1 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-xs font-medium rounded-lg transition cursor-pointer">-1</button>
+                            <button onclick="updateStudyCount(${item.id}, 1)" class="px-3 py-1 bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-medium rounded-lg transition cursor-pointer theme-bg">+1 進める</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('study-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('study-title').value;
+            const total = parseInt(document.getElementById('study-total').value) || 1;
+            studyItems.push({ id: Date.now(), title, current: 0, total });
+            document.getElementById('study-title').value = '';
+            document.getElementById('study-total').value = '';
+            saveStudy();
+        });
+
+        function updateStudyCount(id, delta) {
+            studyItems = studyItems.map(item => {
+                if (item.id === id) {
+                    const next = Math.max(0, Math.min(item.total, item.current + delta));
+                    return { ...item, current: next };
+                }
+                return item;
+            });
+            saveStudy();
+        }
+
+        function deleteStudy(id) {
+            studyItems = studyItems.filter(i => i.id !== id);
+            saveStudy();
+        }
+
+        // --- 追加機能 2: 筋トレ＆健康ログ ---
+        let workouts = JSON.parse(localStorage.getItem('ph_workouts')) || [
+            { id: 1, title: '腕立て伏せ', detail: '20回 × 3セット', date: '2026-10-18' }
+        ];
+
+        function saveWorkouts() {
+            localStorage.setItem('ph_workouts', JSON.stringify(workouts));
+            renderWorkouts();
+        }
+
+        function renderWorkouts() {
+            const container = document.getElementById('workout-list-container');
+            if (workouts.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm">トレーニング記録はありません。</div>`;
+                return;
+            }
+            container.innerHTML = workouts.map(w => `
+                <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl">
+                    <div>
+                        <h4 class="text-sm font-medium"><i class="fa-solid fa-dumbbell text-indigo-500 mr-2 theme-text"></i>${w.title}</h4>
+                        <p class="text-xs text-slate-500 mt-1">内容: <span class="font-bold">${w.detail}</span> / 記録日: ${w.date}</p>
+                    </div>
+                    <button onclick="deleteWorkout(${w.id})" class="text-slate-400 hover:text-rose-500 p-2 transition cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('workout-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('workout-title').value;
+            const detail = document.getElementById('workout-detail').value;
+            const date = new Date().toISOString().split('T')[0];
+            workouts.push({ id: Date.now(), title, detail, date });
+            document.getElementById('workout-title').value = '';
+            document.getElementById('workout-detail').value = '';
+            saveWorkouts();
+        });
+
+        function deleteWorkout(id) {
+            workouts = workouts.filter(w => w.id !== id);
+            saveWorkouts();
+        }
+
+        // --- ポモドーロタイマー ---
+        let timerInterval = null;
+        let timerSeconds = 25 * 60;
+        let isTimerRunning = false;
+        let currentMode = 'work';
+        const timerTimes = { work: 25 * 60, shortBreak: 5 * 60, longBreak: 15 * 60 };
+
+        function setTimerMode(mode) {
+            currentMode = mode;
+            timerSeconds = timerTimes[mode];
+            pauseTimer();
+            updateTimerDisplay();
+            document.querySelectorAll('[id^="mode-"]').forEach(btn => {
+                btn.className = "px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition cursor-pointer";
+            });
+            const activeBtn = document.getElementById(`mode-${mode}`);
+            const map = colorMap[currentThemeColor] || colorMap.indigo;
+            activeBtn.className = `px-4 py-2 rounded-xl text-xs font-semibold text-white transition shadow-sm cursor-pointer ${map.bg}`;
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(timerSeconds / 60).toString().padStart(2, '0');
+            const s = (timerSeconds % 60).toString().padStart(2, '0');
+            document.getElementById('timer-display').textContent = `${m}:${s}`;
+        }
+
+        function toggleTimer() {
+            if (isTimerRunning) { pauseTimer(); } else { startTimer(); }
+        }
+
+        function startTimer() {
+            isTimerRunning = true;
+            document.getElementById('timer-btn-text').textContent = '一時停止';
+            document.getElementById('timer-icon').className = 'fa-solid fa-pause';
+            const map = colorMap[currentThemeColor] || colorMap.indigo;
+            document.getElementById('timer-start-btn').className = `bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-8 rounded-xl text-sm transition shadow-md cursor-pointer flex items-center space-x-2`;
+            
+            timerInterval = setInterval(() => {
+                if (timerSeconds > 0) {
+                    timerSeconds--;
+                    updateTimerDisplay();
+                } else {
+                    pauseTimer();
+                    alert('セッション終了です！お疲れ様でした。');
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            isTimerRunning = false;
+            clearInterval(timerInterval);
+            document.getElementById('timer-btn-text').textContent = 'スタート';
+            document.getElementById('timer-icon').className = 'fa-solid fa-play';
+            const map = colorMap[currentThemeColor] || colorMap.indigo;
+            document.getElementById('timer-start-btn').className = `${map.bg} hover:opacity-90 text-white font-bold py-3 px-8 rounded-xl text-sm transition shadow-md cursor-pointer flex items-center space-x-2`;
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            timerSeconds = timerTimes[currentMode];
+            updateTimerDisplay();
+        }
+
+        // --- 環境音（Web Audio API） ---
+        let audioCtx = null;
+        let ambientNode = null;
+        let activeSoundType = null;
+
+        function toggleAmbientSound(type) {
+            if (activeSoundType === type) { stopAmbientSound(); return; }
+            stopAmbientSound();
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const bufferSize = audioCtx.sampleRate * 2;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                let white = Math.random() * 2 - 1;
+                output[i] = type === 'rain' ? white * 0.2 : (white + (Math.sin(i / 1000) * 0.5)) * 0.15;
+            }
+            ambientNode = audioCtx.createBufferSource();
+            ambientNode.buffer = noiseBuffer;
+            ambientNode.loop = true;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = type === 'rain' ? 'lowpass' : 'bandpass';
+            filter.frequency.value = type === 'rain' ? 1000 : 400;
+            ambientNode.connect(filter);
+            filter.connect(audioCtx.destination);
+            ambientNode.start();
+            activeSoundType = type;
+        }
+
+        function stopAmbientSound() {
+            if (ambientNode) { ambientNode.stop(); ambientNode.disconnect(); ambientNode = null; }
+            if (audioCtx) { audioCtx.close(); audioCtx = null; }
+            activeSoundType = null;
+        }
+
+        // --- マネープランナー ---
+        let compoundChartInstance = null;
+
+        function calculateCompound() {
+            const monthly = parseFloat(document.getElementById('money-monthly').value) || 0;
+            const rate = (parseFloat(document.getElementById('money-rate').value) || 0) / 100;
+            const years = parseInt(document.getElementById('money-years').value) || 1;
+            let labels = [], principalData = [], totalData = [];
+            let currentTotal = 0, currentPrincipal = 0;
+
+            for (let y = 0; y <= years; y++) {
+                labels.push(`${y}年後`);
+                principalData.push(Math.round(currentPrincipal));
+                totalData.push(Math.round(currentTotal));
+                if (y < years) {
+                    for (let m = 0; m < 12; m++) {
+                        currentTotal = (currentTotal + monthly) * (1 + rate / 12);
+                        currentPrincipal += monthly;
+                    }
+                }
+            }
+            document.getElementById('res-principal').textContent = `¥${currentPrincipal.toLocaleString()}`;
+            document.getElementById('res-profit').textContent = `¥${Math.round(currentTotal - currentPrincipal).toLocaleString()}`;
+            document.getElementById('res-total').textContent = `¥${Math.round(currentTotal).toLocaleString()}`;
+            updateCompoundChart(labels, principalData, totalData);
+        }
+
+        function updateCompoundChart(labels, principal, total) {
+            const ctx = document.getElementById('compoundChart').getContext('2d');
+            if (compoundChartInstance) { compoundChartInstance.destroy(); }
+            compoundChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: '資産合計', data: total, borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.1)', fill: true, tension: 0.3 },
+                        { label: '元本合計', data: principal, borderColor: '#94a3b8', borderDash: [5, 5], fill: false, tension: 0.3 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        // --- 習慣＆ストリーク ---
+        let habits = JSON.parse(localStorage.getItem('ph_habits')) || [
+            { id: 1, title: 'プログラミング学習・コード書き', streak: 12, checkedToday: true }
+        ];
+
+        function saveHabits() {
+            localStorage.setItem('ph_habits', JSON.stringify(habits));
+            renderHabits();
+            updateStats();
+        }
+
+        function renderHabits() {
+            const container = document.getElementById('habit-list-container');
+            if (habits.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm">習慣が登録されていません。</div>`;
+                return;
+            }
+            container.innerHTML = habits.map(habit => `
+                <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl">
+                    <div class="flex items-center space-x-3 flex-1">
+                        <input type="checkbox" ${habit.checkedToday ? 'checked' : ''} onchange="toggleHabit(${habit.id})"
+                            class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
+                        <div>
+                            <h4 class="text-sm font-medium">${habit.title}</h4>
+                            <span class="text-xs text-amber-600 dark:text-amber-400 font-semibold"><i class="fa-solid fa-fire mr-1"></i>継続 ${habit.streak} 日連続！</span>
+                        </div>
+                    </div>
+                    <button onclick="deleteHabit(${habit.id})" class="text-slate-400 hover:text-rose-500 p-2 transition cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('habit-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('habit-title').value;
+            habits.push({ id: Date.now(), title, streak: 0, checkedToday: false });
+            document.getElementById('habit-title').value = '';
+            saveHabits();
+        });
+
+        function toggleHabit(id) {
+            habits = habits.map(h => {
+                if (h.id === id) {
+                    const checkedToday = !h.checkedToday;
+                    const streak = checkedToday ? h.streak + 1 : Math.max(0, h.streak - 1);
+                    return { ...h, checkedToday, streak };
+                }
+                return h;
+            });
+            saveHabits();
+        }
+
+        function deleteHabit(id) {
+            habits = habits.filter(h => h.id !== id);
+            saveHabits();
+        }
+
+        // --- 追加機能 4: クイックメモ帳 ---
+        let memos = JSON.parse(localStorage.getItem('ph_memos')) || [
+            { id: 1, title: 'アイデアメモ', content: 'Vercelへの公開とスマホでの見やすさを調整する。', date: '2026-10-18' }
+        ];
+
+        function saveMemos() {
+            localStorage.setItem('ph_memos', JSON.stringify(memos));
+            renderMemos();
+        }
+
+        function renderMemos() {
+            const container = document.getElementById('memo-list-container');
+            if (memos.length === 0) {
+                container.innerHTML = `<div class="col-span-2 text-center py-8 text-slate-400 text-sm">メモはありません。</div>`;
+                return;
+            }
+            container.innerHTML = memos.map(m => `
+                <div class="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <h4 class="text-sm font-bold">${m.title}</h4>
+                            <button onclick="deleteMemo(${m.id})" class="text-slate-400 hover:text-rose-500 p-1 transition cursor-pointer"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                        </div>
+                        <p class="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap">${m.content}</p>
+                    </div>
+                    <div class="text-right text-[10px] text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800">${m.date}</div>
+                </div>
+            `).join('');
+        }
+
+        document.getElementById('memo-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('memo-title').value;
+            const content = document.getElementById('memo-content').value;
+            const date = new Date().toLocaleDateString('ja-JP');
+            memos.push({ id: Date.now(), title, content, date });
+            document.getElementById('memo-title').value = '';
+            document.getElementById('memo-content').value = '';
+            saveMemos();
+        });
+
+        function deleteMemo(id) {
+            memos = memos.filter(m => m.id !== id);
+            saveMemos();
+        }
+
+        // --- 統計データ・初期化 ---
+        function updateStats() {
+            const pending = tasks.filter(t => !t.completed).length;
+            document.getElementById('stat-pending-tasks').textContent = `${pending}件`;
+
+            const totalHabits = habits.length;
+            const completedHabits = habits.filter(h => h.checkedToday).length;
+            const habitRate = totalHabits > 0 ? Math.round((completedHabits / totalHabits) * 100) : 0;
+            document.getElementById('stat-habit-rate').textContent = `${habitRate}%`;
+
+            const totalStudyCount = studyItems.reduce((acc, cur) => acc + cur.total, 0);
+            const currentStudyCount = studyItems.reduce((acc, cur) => acc + cur.current, 0);
+            const studyRate = totalStudyCount > 0 ? Math.round((currentStudyCount / totalStudyCount) * 100) : 0;
+            document.getElementById('stat-study-rate').textContent = `${studyRate}%`;
+        }
+
+        // 初期実行
+        changeThemeColor(currentThemeColor);
+        renderTasks();
+        renderStudy();
+        renderWorkouts();
+        renderHabits();
+        renderMemos();
+        updateStats();
+    </script>
+</body>
+</html>
