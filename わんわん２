@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>難読地名クイズ</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+  <div class="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl p-6 border border-slate-700">
+    
+    <!-- ヘッダー -->
+    <div class="text-center mb-6">
+      <span class="text-xs font-bold bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full border border-indigo-500/30">
+        <i class="fa-solid fa-map-location-dot mr-1"></i>難読地名マスター
+      </span>
+      <h1 class="text-2xl font-bold mt-2 text-white">読めたらすごい！地名クイズ</h1>
+    </div>
+
+    <!-- 1. ジャンル選択画面 -->
+    <div id="category-area" class="space-y-4">
+      <p class="text-center text-sm text-slate-300 font-medium mb-2">挑戦するジャンルを選んでください</p>
+      
+      <button onclick="startQuiz('all')" 
+        class="w-full p-4 bg-slate-700/60 hover:bg-indigo-600/80 border border-slate-600 rounded-xl text-left transition flex items-center justify-between group">
+        <div>
+          <div class="font-bold text-white group-hover:text-white">🌏 全国の人気難読</div>
+          <div class="text-xs text-slate-400 group-hover:text-indigo-100">日本全国の有名・定番クイズ（6問）</div>
+        </div>
+        <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-white"></i>
+      </button>
+
+      <button onclick="startQuiz('kanto')" 
+        class="w-full p-4 bg-slate-700/60 hover:bg-indigo-600/80 border border-slate-600 rounded-xl text-left transition flex items-center justify-between group">
+        <div>
+          <div class="font-bold text-white group-hover:text-white">🗼 関東エリア</div>
+          <div class="text-xs text-slate-400 group-hover:text-indigo-100">東京・千葉・神奈川・埼玉などの地名（6問）</div>
+        </div>
+        <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-white"></i>
+      </button>
+
+      <button onclick="startQuiz('kansai')" 
+        class="w-full p-4 bg-slate-700/60 hover:bg-indigo-600/80 border border-slate-600 rounded-xl text-left transition flex items-center justify-between group">
+        <div>
+          <div class="font-bold text-white group-hover:text-white">🏯 関西エリア</div>
+          <div class="text-xs text-slate-400 group-hover:text-indigo-100">大阪・京都・滋賀・兵庫などの地名（6问）</div>
+        </div>
+        <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-white"></i>
+      </button>
+
+      <button onclick="startQuiz('hard')" 
+        class="w-full p-4 bg-slate-700/60 hover:bg-rose-600/80 border border-slate-600 rounded-xl text-left transition flex items-center justify-between group">
+        <div>
+          <div class="font-bold text-white group-hover:text-white">🔥 超・激難編</div>
+          <div class="text-xs text-slate-400 group-hover:text-rose-100">初見殺しの超難読地名に挑戦！（6問）</div>
+        </div>
+        <i class="fa-solid fa-chevron-right text-slate-500 group-hover:text-white"></i>
+      </button>
+    </div>
+
+    <!-- 2. クイズ実行エリア (初期状態は非表示) -->
+    <div id="quiz-area" class="hidden">
+      <!-- スコア＆プログレス -->
+      <div class="flex justify-between items-center text-sm text-slate-400 mb-4 px-1">
+        <span id="progress-text">第 1 問 / 全 6 問</span>
+        <span id="score-text" class="font-semibold text-emerald-400">正解数: 0</span>
+      </div>
+
+      <!-- クイズカード -->
+      <div id="quiz-card" class="bg-slate-900/80 rounded-xl p-6 mb-6 text-center border border-slate-700/50">
+        <div id="pref-badge" class="text-xs text-indigo-300 font-medium mb-1">【都道府県】</div>
+        <div id="kanji-place" class="text-4xl font-extrabold text-white my-3 tracking-wider">-</div>
+        <p class="text-xs text-slate-400">この地名の「読み（ひらがな）」を入力してください</p>
+      </div>
+
+      <!-- 入力フォームエリア -->
+      <div id="input-area" class="space-y-3">
+        <input type="text" id="user-input" placeholder="例: たかなわ" autocomplete="off"
+          class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-center text-lg focus:outline-none focus:border-indigo-500 text-white placeholder-slate-500 transition">
+        
+        <button id="submit-btn" onclick="checkAnswer()" 
+          class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition active:scale-[0.98]">
+          回答する
+        </button>
+      </div>
+
+      <!-- 結果・解説表示エリア -->
+      <div id="result-area" class="hidden space-y-4">
+        <div id="result-badge" class="text-center text-xl font-bold py-2 rounded-lg"></div>
+        
+        <div class="bg-slate-900/50 p-4 rounded-xl text-sm border border-slate-700/50">
+          <p class="text-slate-400 mb-1">正解の読み:</p>
+          <p id="correct-reading" class="text-xl font-bold text-emerald-400 mb-2"></p>
+          <p id="description" class="text-slate-300 text-xs leading-relaxed"></p>
+        </div>
+
+        <button id="next-btn" onclick="nextQuestion()" 
+          class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition active:scale-[0.98]">
+          次の問題へ <i class="fa-solid fa-arrow-right ml-1"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. 最終結果画面 (初期状態は非表示) -->
+    <div id="final-area" class="hidden text-center space-y-6 py-4">
+      <div class="text-5xl">🎉</div>
+      <h2 class="text-2xl font-bold text-white">クイズ終了！</h2>
+      <p id="final-score" class="text-lg text-slate-300"></p>
+      
+      <button onclick="backToCategory()" 
+        class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition active:scale-[0.98]">
+        ジャンル選択に戻る
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    // ジャンル別地名データセット（重複なし・全24問）
+    const allQuizData = {
+      all: [
+        { kanji: "轟", reading: "とどろき", pref: "熊本県（美里町）", desc: "水が激しく流れる音や雷の響きに由来するとされる迫力ある地名です。" },
+        { kanji: "五十鈴", reading: "いすず", pref: "三重県（伊勢市）", desc: "伊勢神宮を流れる五十鈴川に由来。川の波立つ音が鈴の音に似ていることから名付けられました。" },
+        { kanji: "弥富", reading: "やとみ", pref: "愛知県（弥富市）", desc: "「富が弥（いよいよ）増す」という縁起の良い名前で、金魚の養殖でも有名です。" },
+        { kanji: "主税", reading: "ちから", pref: "愛知県（名古屋市）", desc: "名古屋市東区にある地名。江戸時代の主税寮や役人の屋敷に由来します。" },
+        { kanji: "神戸", reading: "ごうど", pref: "岐阜県（神戸町）", desc: "「こうべ」ではなく「ごうど」と読みます。神社に属する民家（神戸＝かんべ）に由来します。" },
+        { kanji: "南風原", reading: "はえばる", pref: "沖縄県（南風原町）", desc: "沖縄本島南部の町。「南風（はえ）」は沖縄の方言で南からの風を意味します。" }
+      ],
+      kanto: [
+        { kanji: "高輪", reading: "たかなわ", pref: "東京都（港区）", desc: "「高輪ゲートウェイ駅」でも有名。高台の縄手（直線の道）に由来すると言われています。" },
+        { kanji: "九品仏", reading: "くほんぶつ", pref: "東京都（世田谷区）", desc: "浄真寺にある9体の阿弥陀如来像にちなんで付けられた歴史ある地名です。" },
+        { kanji: "調布", reading: "ちょうふ", pref: "東京都（調布市）", desc: "古代、租税として布（手織りの絹や麻）を朝廷に納めていたことに由来します。" },
+        { kanji: "飯山満", reading: "はさま", pref: "千葉県（船橋市）", desc: "東葉高速鉄道の難読駅名。「谷あい（狭間）」に由来すると言われています。" },
+        { kanji: "軍畑", reading: "いくさばた", pref: "東京都（青梅市）", desc: "鎌倉時代の合戦（戦）が行われた舞台であったことに由来します。" },
+        { kanji: "保土ケ谷", reading: "ほどがや", pref: "神奈川県（横浜市）", desc: "東海道五十三次の宿場町。傾斜地（ホド）にある谷あいの地に由来すると言われます。" }
+      ],
+      kansai: [
+        { kanji: "十三", reading: "じゅうそう", pref: "大阪府（大阪市）", desc: "阪急電車の主要ターミナル駅。かつて淀川の13番目の渡し場があった説などが有名です。" },
+        { kanji: "喜連瓜破", reading: "きれうりわり", pref: "大阪府（大阪市）", desc: "「喜連」と「瓜破」という2つの古い地名が合体してできた難読地名です。" },
+        { kanji: "放出", reading: "はなてん", pref: "大阪府（大阪市）", desc: "河内の放水路の出口（放ち出づる場所）だったことに由来する有名な難読駅名です。" },
+        { kanji: "百舌鳥", reading: "もず", pref: "大阪府（堺市）", desc: "世界遺産・百舌鳥古市古墳群で有名。鳥の「モズ」に由来する歴史ある漢字表記です。" },
+        { kanji: "太秦", reading: "うずまさ", pref: "京都府（京都市）", desc: "東映太秦映画村で有名。渡来人の秦氏が絹織物を「渦高く積み上げた」ことに由来します。" },
+        { kanji: "穴太", reading: "あのお", pref: "滋賀県（大津市）", desc: "城郭の石垣を積む専門職人集団「穴太衆（あのうしゅう）」で知られる歴史的地域です。" }
+      ],
+      hard: [
+        { kanji: "特牛", reading: "こっとい", pref: "山口県（下関市）", desc: "牝牛（めうし）を意味する方言「コトイ」に由来する全国有数の難読駅名です。" },
+        { kanji: "及位", reading: "のぞき", pref: "山形県（真室川町）", desc: "修験道の行者が崖から身を乗り出して修行した（覗き込んだ）言い伝えに由来します。" },
+        { kanji: "寒風沢", reading: "さぶさわ", pref: "宮城県（塩竈市）", desc: "松島湾に浮かぶ離島の地名。「さむかぜ」ではなく「さぶさわ」と読む超難読地名です。" },
+        { kanji: "私市", reading: "きさいち", pref: "大阪府（交野市）", desc: "京阪交野線の終着駅。皇后の部民（私部・きさきべ）が集まる地に由来します。" },
+        { kanji: "揖保川", reading: "いぼがわ", pref: "兵庫県（たつの市）", desc: "手延素麺「揖保乃糸（いぼのいと）」で有名な清流・地域名です。" },
+        { kanji: "面縄", reading: "おまなわ", pref: "鹿児島県（伊仙町）", desc: "奄美群島の徳之島にある地名。南国の豊かな自然と歴史を持つ難読地名です。" }
+      ]
+    };
+
+    let activeQuizList = [];
+    let currentIdx = 0;
+    let score = 0;
+
+    // クイズ開始（ジャンル選択時）
+    function startQuiz(categoryKey) {
+      activeQuizList = allQuizData[categoryKey];
+      currentIdx = 0;
+      score = 0;
+
+      document.getElementById('category-area').classList.add('hidden');
+      document.getElementById('quiz-area').classList.remove('hidden');
+      
+      loadQuestion();
+    }
+
+    // 問題を表示
+    function loadQuestion() {
+      const q = activeQuizList[currentIdx];
+      document.getElementById('pref-badge').textContent = `【${q.pref}】`;
+      document.getElementById('kanji-place').textContent = q.kanji;
+      document.getElementById('progress-text').textContent = `第 ${currentIdx + 1} 問 / 全 ${activeQuizList.length} 問`;
+      document.getElementById('score-text').textContent = `正解数: ${score}`;
+      
+      document.getElementById('user-input').value = '';
+      document.getElementById('input-area').classList.remove('hidden');
+      document.getElementById('result-area').classList.add('hidden');
+    }
+
+    // 回答判定
+    function checkAnswer() {
+      const input = document.getElementById('user-input').value.trim();
+      if (!input) return;
+
+      const q = activeQuizList[currentIdx];
+      const isCorrect = (input === q.reading);
+
+      if (isCorrect) score++;
+
+      document.getElementById('input-area').classList.add('hidden');
+      document.getElementById('result-area').classList.remove('hidden');
+
+      const badge = document.getElementById('result-badge');
+      if (isCorrect) {
+        badge.textContent = "⭕ 正解！";
+        badge.className = "text-center text-xl font-bold py-2 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+      } else {
+        badge.textContent = "❌ 残念！";
+        badge.className = "text-center text-xl font-bold py-2 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30";
+      }
+
+      document.getElementById('correct-reading').textContent = q.reading;
+      document.getElementById('description').textContent = q.desc;
+    }
+
+    // 次の問題へ
+    function nextQuestion() {
+      currentIdx++;
+      if (currentIdx < activeQuizList.length) {
+        loadQuestion();
+      } else {
+        showFinal();
+      }
+    }
+
+    // 最終結果画面
+    function showFinal() {
+      document.getElementById('quiz-area').classList.add('hidden');
+      document.getElementById('final-area').classList.remove('hidden');
+
+      document.getElementById('final-score').innerHTML = 
+        `あなたの正解数は <span class="text-3xl font-bold text-emerald-400">${score}</span> / ${activeQuizList.length} 問でした！`;
+    }
+
+    // ジャンル選択に戻る
+    function backToCategory() {
+      document.getElementById('final-area').classList.add('hidden');
+      document.getElementById('category-area').classList.remove('hidden');
+    }
+
+    // エンターキー送信対応
+    document.getElementById('user-input').addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        checkAnswer();
+      }
+    });
+  </script>
+</body>
+</html>
